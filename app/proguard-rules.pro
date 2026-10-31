@@ -1,0 +1,2 @@
+-keep class com.ng2.dawn.NativeBridge { *; }
+-keepclassmembers class * { native <methods>; }
