@@ -1,4 +1,4 @@
-###Android port scaffold for the Ninja Gaiden II recompilation project
+### Android port scaffold for the Ninja Gaiden II recompilation project
 
 Quick start (test mode, no game or SDK needed):
 
