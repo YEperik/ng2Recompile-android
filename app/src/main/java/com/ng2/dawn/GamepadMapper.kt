@@ -20,6 +20,7 @@ class GamepadMapper(private val onPad: (PadState) -> Unit) {
     private var dpadKeys = 0
     var seen = false
         private set
+    var deadzone = PadMath.STICK_DEADZONE
 
     companion object {
         fun isGamepad(source: Int) =
@@ -71,11 +72,11 @@ class GamepadMapper(private val onPad: (PadState) -> Unit) {
         if (ev.source and InputDevice.SOURCE_JOYSTICK != InputDevice.SOURCE_JOYSTICK ||
             ev.action != MotionEvent.ACTION_MOVE) return false
         // Left stick. Android Y is down-positive: flip to XInput.
-        val (a, b) = radial(ev.getAxisValue(MotionEvent.AXIS_X), ev.getAxisValue(MotionEvent.AXIS_Y))
+        val (a, b) = PadMath.radial(ev.getAxisValue(MotionEvent.AXIS_X), ev.getAxisValue(MotionEvent.AXIS_Y), deadzone)
         lx = a; ly = -b
         // Right stick: Z/RZ on Xbox-style pads, RX/RY on others - take whichever moves.
-        val (zx, zy) = radial(ev.getAxisValue(MotionEvent.AXIS_Z), ev.getAxisValue(MotionEvent.AXIS_RZ))
-        val (px, py) = radial(ev.getAxisValue(MotionEvent.AXIS_RX), ev.getAxisValue(MotionEvent.AXIS_RY))
+        val (zx, zy) = PadMath.radial(ev.getAxisValue(MotionEvent.AXIS_Z), ev.getAxisValue(MotionEvent.AXIS_RZ), deadzone)
+        val (px, py) = PadMath.radial(ev.getAxisValue(MotionEvent.AXIS_RX), ev.getAxisValue(MotionEvent.AXIS_RY), deadzone)
         if (hypot(zx, zy) >= hypot(px, py)) { rx = zx; ry = -zy } else { rx = px; ry = -py }
         lt = max(ev.getAxisValue(MotionEvent.AXIS_LTRIGGER), ev.getAxisValue(MotionEvent.AXIS_BRAKE))
             .coerceIn(0f, 1f).let { if (it < 0.05f) 0f else it }
@@ -85,14 +86,6 @@ class GamepadMapper(private val onPad: (PadState) -> Unit) {
         hatY = ev.getAxisValue(MotionEvent.AXIS_HAT_Y)
         push()
         return true
-    }
-
-    private fun radial(x: Float, y: Float): Pair<Float, Float> {
-        val m = hypot(x, y)
-        val dead = 0.12f
-        if (m < dead) return 0f to 0f
-        val s = ((m - dead) / (1f - dead)).coerceIn(0f, 1f)
-        return (x / m) * s to (y / m) * s
     }
 
     private fun push() {
