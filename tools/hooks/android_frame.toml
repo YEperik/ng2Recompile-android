@@ -1,0 +1,11 @@
+# Per-frame hook for the Android build: feeds the FPS overlay and telemetry.
+#
+# Same guest address as the desktop project's diagnostics hook (sub_822F3A88
+# runs once per frame from the game's main loop; the hook fires after the
+# instruction at 0x822F3A8C). The desktop hook lives in diagnostics.toml, which
+# is dropped for Android because the rest of it needs Win32.
+[[midasm_hook]]
+address = 0x822F3A8C
+name = "ng2AndroidFrameTick"
+registers = []
+after_instruction = true
