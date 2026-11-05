@@ -6,7 +6,8 @@ plugins {
 android {
     namespace = "com.ng2.dawn"
     compileSdk = 34
-    ndkVersion = "26.3.11579264"
+    // ReXGlue requires Clang 18+: NDK r27 or newer.
+    ndkVersion = "27.2.12479018"
 
     defaultConfig {
         applicationId = "com.ng2.dawn"
@@ -23,11 +24,10 @@ android {
                 arguments += listOf(
                     "-DANDROID_STL=c++_shared",
                     "-DANDROID_ARM_NEON=ON",
-                    // Point these at the real inputs to turn the stub host into the game.
-                    // See docs/ANDROID_PORT.md, section "Linking the real runtime".
+                    // Real runtime: pass all three (see docs/ANDROID_PORT.md).
                     "-DNG2_WITH_REXGLUE=${findProperty("ng2.withRexglue") ?: "OFF"}",
                     "-DNG2_REPO_DIR=${findProperty("ng2.repoDir") ?: ""}",
-                    "-DREXGLUE_ANDROID_DIR=${findProperty("ng2.rexglueDir") ?: ""}"
+                    "-DREXGLUE_SDK_DIR=${findProperty("ng2.sdkDir") ?: ""}"
                 )
             }
         }
