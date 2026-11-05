@@ -36,7 +36,32 @@ class Settings(context: Context) {
         get() = p.getInt("texture_cache_mb", 768)
         set(v) = p.edit().putInt("texture_cache_mb", v.coerceIn(128, 4096)).apply()
 
+    // ---- diagnostics ----
+    var showFps: Boolean
+        get() = p.getBoolean("show_fps", true)
+        set(v) = p.edit().putBoolean("show_fps", v).apply()
+
+    /** "host:port" of a PC running `ng2dev.py watch --udp PORT`; empty = off. */
+    var telemetryTarget: String
+        get() = p.getString("telemetry_target", "") ?: ""
+        set(v) = p.edit().putString("telemetry_target", v.trim()).apply()
+
+    /** Native (SDK) log verbosity: info | debug | trace. Applied at the next game start. */
+    var logLevel: String
+        get() = p.getString("log_level", "info") ?: "info"
+        set(v) = p.edit().putString("log_level", if (v in setOf("info", "debug", "trace")) v else "info").apply()
+
     // ---- touch controls (Android only) ----
+
+    var stickDeadzone: Float
+        get() = p.getFloat("stick_dead", PadMath.STICK_DEADZONE)
+        set(v) = p.edit().putFloat("stick_dead", v.coerceIn(0.0f, 0.4f)).apply()
+
+    /** >1 reaches full deflection with less finger travel. */
+    var stickSensitivity: Float
+        get() = p.getFloat("stick_sens", 1.0f)
+        set(v) = p.edit().putFloat("stick_sens", v.coerceIn(0.5f, 2.0f)).apply()
+
     var controlsOpacity: Float
         get() = p.getFloat("ctl_opacity", 0.55f)
         set(v) = p.edit().putFloat("ctl_opacity", v.coerceIn(0.1f, 1f)).apply()
