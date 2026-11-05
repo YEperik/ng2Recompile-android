@@ -16,17 +16,36 @@ data class Element(
     var x: Float,
     var y: Float,
     var size: Float,
-    val label: String,
-    val mask: Int = 0,          // BUTTON: XInput mask. STICK/TRIGGER: see `side`
+    var label: String,
+    var mask: Int = 0,          // BUTTON: XInput mask (remappable). STICK/TRIGGER: see `side`
     val side: Int = 0,          // STICK: 0 left, 1 right.  TRIGGER: 0 left, 1 right
 )
 
 object ControlLayout {
+    /** What an on-screen button can be made to press. Order = order in the dialog. */
+    val BUTTON_CHOICES: List<Pair<String, Int>> = listOf(
+        "A" to Btn.A, "B" to Btn.B, "X" to Btn.X, "Y" to Btn.Y,
+        "LB" to Btn.LB, "RB" to Btn.RB, "Start" to Btn.START, "Back" to Btn.BACK,
+        "L3 (klik stik kiri)" to Btn.LTHUMB, "R3 (klik stik kanan)" to Btn.RTHUMB,
+        "D-pad atas" to Btn.DPAD_UP, "D-pad bawah" to Btn.DPAD_DOWN,
+        "D-pad kiri" to Btn.DPAD_LEFT, "D-pad kanan" to Btn.DPAD_RIGHT,
+    )
+
+    /** The glyph drawn on the button. */
+    fun labelFor(mask: Int): String = when (mask) {
+        Btn.A -> "A"; Btn.B -> "B"; Btn.X -> "X"; Btn.Y -> "Y"; Btn.LB -> "LB"; Btn.RB -> "RB"
+        Btn.START -> "▶"; Btn.BACK -> "◀"; Btn.LTHUMB -> "L3"; Btn.RTHUMB -> "R3"
+        Btn.DPAD_UP -> "↑"; Btn.DPAD_DOWN -> "↓"; Btn.DPAD_LEFT -> "←"; Btn.DPAD_RIGHT -> "→"
+        else -> "?"
+    }
+
+    fun isValidMask(mask: Int) = BUTTON_CHOICES.any { it.second == mask }
+
     /** Default landscape layout. Matches Xbox 360 positions people already know. */
     fun defaults(): MutableList<Element> = mutableListOf(
         Element("ls", ElementType.STICK, 0.13f, 0.68f, 0.17f, "", side = 0),
         Element("rs", ElementType.STICK, 0.66f, 0.80f, 0.12f, "", side = 1),
-        Element("dpad", ElementType.DPAD, 0.30f, 0.80f, 0.12f, ""),
+        Element("dpad", ElementType.DPAD, 0.36f, 0.80f, 0.12f, ""),
         Element("a", ElementType.BUTTON, 0.88f, 0.80f, 0.075f, "A", Btn.A),
         Element("b", ElementType.BUTTON, 0.94f, 0.65f, 0.075f, "B", Btn.B),
         Element("x", ElementType.BUTTON, 0.82f, 0.65f, 0.075f, "X", Btn.X),
@@ -63,6 +82,11 @@ object ControlLayout {
                 base.x = o.getDouble("x").toFloat().coerceIn(0.02f, 0.98f)
                 base.y = o.getDouble("y").toFloat().coerceIn(0.02f, 0.98f)
                 base.size = o.getDouble("size").toFloat().coerceIn(0.03f, 0.30f)
+                // A remapped button keeps its new function; an invalid mask is ignored.
+                if (base.type == ElementType.BUTTON && o.has("mask")) {
+                    val m = o.getInt("mask")
+                    if (isValidMask(m)) { base.mask = m; base.label = labelFor(m) }
+                }
             }
             defaults().map { byId.getValue(it.id) }.toMutableList()
         } catch (_: Exception) {
