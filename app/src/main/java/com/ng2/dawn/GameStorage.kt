@@ -47,7 +47,8 @@ object GameStorage {
             val key = be32(0x18 + i * 8)
             if (key != 0x00040006L) continue
             val off = be32(0x18 + i * 8 + 4).toInt()
-            if (off < 0 || off + 24 > head.size) return null
+            // Long arithmetic: a hostile offset near Int.MAX_VALUE would overflow `off + 24` and slip past the check.
+            if (off < 0 || off.toLong() + 24 > head.size) return null
             return XexInfo(
                 titleId = be32(off + 12),
                 discNumber = head[off + 18].toInt() and 0xFF,
@@ -74,7 +75,7 @@ object GameStorage {
     /**
      * Copies a folder chosen with ACTION_OPEN_DOCUMENT_TREE into [dest].
      * Resumable: a file already present at the right size is skipped, so an
-     * interrupted 6.7 GB copy continues instead of restarting.
+     * interrupted multi-GB copy continues instead of restarting.
      */
     suspend fun copyTree(
         context: Context,
@@ -99,7 +100,7 @@ object GameStorage {
         walk(root, dest)
 
         val total = files.sumOf { it.first.length() }
-        val already = files.sumOf { (src, dst) -> if (dst.length() == src.length()) src.length() else 0L }
+        val already = files.sumOf { (src, dst) -> if (dst.isFile && dst.length() == src.length()) src.length() else 0L }
         val need = total - already
         val have = StatFs(dest.absolutePath).availableBytes
         if (need > have) throw InsufficientSpace(need, have)
@@ -108,7 +109,7 @@ object GameStorage {
         val buf = ByteArray(1 shl 20)
         for ((src, dst) in files) {
             if (cancel.get()) throw IOException("Dibatalkan")
-            if (dst.length() == src.length()) continue
+            if (dst.isFile && dst.length() == src.length()) continue   // isFile: an empty source must still be created
             dst.parentFile?.mkdirs()
             val tmp = File(dst.path + ".part")
             context.contentResolver.openInputStream(src.uri)?.use { input ->
