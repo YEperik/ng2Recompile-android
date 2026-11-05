@@ -4,20 +4,32 @@ package com.ng2.dawn
 object NativeBridge {
     @Volatile private var loaded = false
 
-    /** Loads libng2android.so once. False means the .so is missing (build problem). */
+    /**
+     * Loads the native library once. The real runtime is built as libmain.so
+     * (SDLActivity requires that name); the test build is libng2android.so.
+     * Exactly one of them is packaged. False means neither is (build problem).
+     */
     @Synchronized
     fun load(): Boolean {
         if (!loaded) {
-            loaded = try { System.loadLibrary("ng2android"); true }
-            catch (_: UnsatisfiedLinkError) { false }
+            for (name in arrayOf("main", "ng2android")) {
+                try { System.loadLibrary(name); loaded = true; break }
+                catch (_: UnsatisfiedLinkError) { /* try the next name */ }
+            }
         }
         return loaded
     }
 
     const val SRC_TOUCH = 0
     const val SRC_GAMEPAD = 1
+    const val SRC_INJECT = 2      // driven from the PC over adb (DevCommands)
 
     @JvmStatic external fun nativeRuntimeLinked(): Boolean
+    /** "key=value" lines: fps, avg_ms, p95_ms, max_ms, since_ms, frames, hitches, polls, pad (see ng2_stats.h). */
+    @JvmStatic external fun nativeGetStats(): String
+    @JvmStatic external fun nativeResetStats()
+    /** "key=value" lines describing the device's Vulkan driver (see ng2_gpu_probe.h). */
+    @JvmStatic external fun nativeProbeVulkan(): String
     @JvmStatic external fun nativeConfigure(filesDir: String, cacheDir: String, gameDir: String)
     @JvmStatic external fun nativeStart(): Boolean
     @JvmStatic external fun nativeStop()
