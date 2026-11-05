@@ -9,11 +9,8 @@ import android.graphics.RectF
 import android.view.HapticFeedbackConstants
 import android.view.MotionEvent
 import android.view.View
-import kotlin.math.abs
-import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.max
-import kotlin.math.min
 
 /**
  * Full-screen virtual Xbox 360 controller.
@@ -41,6 +38,8 @@ class TouchControlsView(context: Context) : View(context) {
         set(v) { field = v; invalidate() }
     var haptics = true
     var floatingStick = true
+    var deadzone = PadMath.STICK_DEADZONE
+    var sensitivity = 1.0f
 
     var editMode = false
         set(v) { field = v; releaseAll(); if (!v) selectedId = null; invalidate() }
@@ -91,6 +90,20 @@ class TouchControlsView(context: Context) : View(context) {
             if (score < bestScore) { bestScore = score; best = e }
         }
         return best
+    }
+
+    // Gesture navigation (Android 10+) turns a swipe from either screen edge into
+    // "Back". The B / RB / LB buttons sit near those edges, so ask the system not to
+    // treat touches here as gestures. (The system caps the excluded height.)
+    override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
+        super.onSizeChanged(w, h, oldw, oldh)
+        if (android.os.Build.VERSION.SDK_INT >= 29) {
+            val strip = (32 * resources.displayMetrics.density).toInt()
+            systemGestureExclusionRects = listOf(
+                android.graphics.Rect(0, 0, strip, h),
+                android.graphics.Rect(w - strip, 0, w, h),
+            )
+        }
     }
 
     // ---- touch -------------------------------------------------------------
@@ -161,27 +174,11 @@ class TouchControlsView(context: Context) : View(context) {
     }
 
     // ---- state -------------------------------------------------------------
-    private fun stickVector(e: Element, b: Binding): Pair<Float, Float> {
-        val dx = b.x - cx(e); val dy = b.y - cy(e)
-        val mag = hypot(dx, dy)
-        if (mag < 1e-3f) return 0f to 0f
-        val norm = min(1f, mag / (radius(e) * 0.9f))
-        val dead = 0.12f
-        val s = if (norm < dead) 0f else (norm - dead) / (1f - dead)
-        return (dx / mag) * s to -(dy / mag) * s      // screen Y is down, XInput Y is up
-    }
+    private fun stickVector(e: Element, b: Binding): Pair<Float, Float> =
+        PadMath.stick(b.x - cx(e), b.y - cy(e), radius(e) * 0.9f, deadzone, sensitivity)
 
-    private fun dpadMask(e: Element, b: Binding): Int {
-        val dx = b.x - cx(e); val dy = b.y - cy(e)
-        if (hypot(dx, dy) < radius(e) * 0.25f) return 0
-        val a = Math.toDegrees(atan2((-dy).toDouble(), dx.toDouble()))   // 0 = right, +up
-        var m = 0
-        if (a > 22.5 && a < 157.5) m = m or Btn.DPAD_UP
-        if (a < -22.5 && a > -157.5) m = m or Btn.DPAD_DOWN
-        if (abs(a) < 67.5) m = m or Btn.DPAD_RIGHT
-        if (abs(a) > 112.5) m = m or Btn.DPAD_LEFT
-        return m
-    }
+    private fun dpadMask(e: Element, b: Binding): Int =
+        PadMath.dpad(b.x - cx(e), b.y - cy(e), radius(e))
 
     private fun computeState(): PadState {
         var buttons = 0
@@ -229,6 +226,19 @@ class TouchControlsView(context: Context) : View(context) {
                 dragPointer = -1
             }
         }
+        invalidate()
+        return true
+    }
+
+    fun selectedElement(): Element? = layout.firstOrNull { it.id == selectedId }
+
+    /** Makes the selected on-screen button press [mask] instead. False if nothing suitable is selected. */
+    fun remapSelected(mask: Int): Boolean {
+        val e = selectedElement() ?: return false
+        if (e.type != ElementType.BUTTON || !ControlLayout.isValidMask(mask)) return false
+        e.mask = mask
+        e.label = ControlLayout.labelFor(mask)
+        onLayoutChanged?.invoke(layout)
         invalidate()
         return true
     }
