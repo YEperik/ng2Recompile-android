@@ -44,6 +44,17 @@ int main() {
   // Bad source index is ignored.
   m.Set(static_cast<Source>(7), t); assert(m.Revision() == r + 1);
 
+  // Injected (adb) source combines like any other, and all three sources work together.
+  PadMixer m2;
+  PadSnapshot inj; inj.buttons = kY; inj.rx = 1.0f; inj.rt = 0.5f;
+  PadSnapshot tc; tc.buttons = kA; tc.rx = 0.3f;
+  m2.Set(kInject, inj); m2.Set(kTouch, tc);
+  PadSnapshot q = m2.Mixed();
+  assert(q.buttons == (kY | kA) && q.rx == 1.0f && q.rt == 0.5f);
+  m2.Set(kInject, PadSnapshot{});                    // releasing the injected pad frees its inputs
+  assert(m2.Mixed().buttons == kA && m2.Mixed().rx == 0.3f);
+  assert(kSourceCount == 3);
+
   puts("pad_state_test: OK");
   return 0;
 }
