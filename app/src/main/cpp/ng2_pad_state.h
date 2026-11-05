@@ -21,7 +21,9 @@ constexpr uint16_t kDpadUp = 0x0001, kDpadDown = 0x0002, kDpadLeft = 0x0004,
                    kLeftShoulder = 0x0100, kRightShoulder = 0x0200,
                    kA = 0x1000, kB = 0x2000, kX = 0x4000, kY = 0x8000;
 
-enum Source : int { kTouch = 0, kGamepad = 1, kSourceCount = 2 };
+// kInject is driven from the PC (adb broadcast, see tools/ng2dev.py) to test the
+// game without touching the phone. It is ORed/maxed with the others like any pad.
+enum Source : int { kTouch = 0, kGamepad = 1, kInject = 2, kSourceCount = 3 };
 
 // Axes are -1..1 with +Y up (XInput convention). Triggers are 0..1.
 struct PadSnapshot {
@@ -81,10 +83,14 @@ class PadMixer {
       out.lt = std::max(out.lt, p.lt);
       out.rt = std::max(out.rt, p.rt);
     }
-    PickStick(out.lx, out.ly, src_[kTouch].lx, src_[kTouch].ly,
-              src_[kGamepad].lx, src_[kGamepad].ly);
-    PickStick(out.rx, out.ry, src_[kTouch].rx, src_[kTouch].ry,
-              src_[kGamepad].rx, src_[kGamepad].ry);
+    // Strongest stick wins across all sources.
+    out.lx = out.ly = out.rx = out.ry = 0;
+    float bestl = 0, bestr = 0;
+    for (const auto& p : src_) {
+      const float ml = p.lx * p.lx + p.ly * p.ly, mr = p.rx * p.rx + p.ry * p.ry;
+      if (ml > bestl) { bestl = ml; out.lx = p.lx; out.ly = p.ly; }
+      if (mr > bestr) { bestr = mr; out.rx = p.rx; out.ry = p.ry; }
+    }
     return out;
   }
 
@@ -98,11 +104,6 @@ class PadMixer {
   }
 
  private:
-  static void PickStick(float& ox, float& oy, float ax, float ay, float bx,
-                        float by) {
-    const float ma = ax * ax + ay * ay, mb = bx * bx + by * by;
-    if (ma >= mb) { ox = ax; oy = ay; } else { ox = bx; oy = by; }
-  }
   mutable std::mutex mu_;
   PadSnapshot src_[kSourceCount];
   uint32_t revision_ = 0;
