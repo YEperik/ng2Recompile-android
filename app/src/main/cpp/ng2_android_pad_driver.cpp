@@ -8,7 +8,11 @@
 
 #include <rex/logging.h>
 
+#include <android/log.h>
+
+#include "ng2_host.h"
 #include "ng2_pad_state.h"
+#include "ng2_stats.h"
 
 namespace ng2 {
 
@@ -46,6 +50,10 @@ class AndroidPadDriver final : public rex::input::InputDriver {
   X_RESULT GetDeviceState(rex::input::DeviceId id, X_INPUT_STATE* out) override {
     if (id != kAndroidPad) return X_ERROR_DEVICE_NOT_CONNECTED;
     if (!out) return X_ERROR_BAD_ARGUMENTS;
+    if (stats::Get().input_polls == 0) {
+      Log(ANDROID_LOG_INFO, "stage: guest polled input for the first time");
+    }
+    stats::NoteInputPoll();
     std::memset(out, 0, sizeof(*out));
     // Only bump the packet number when the state really changed: the guest
     // treats a moving number as "new data".
