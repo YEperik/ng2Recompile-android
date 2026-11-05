@@ -1,0 +1,42 @@
+# Builds the TEST-MODE debug APK (no game, no SDK) in the cloud, so no Android
+# Studio is needed: push this folder to a GitHub repo, open the Actions tab,
+# run "android-test-apk", and download the APK from the run's Artifacts.
+name: android-test-apk
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platforms;android-34" "build-tools;34.0.0" "ndk;27.2.12479018" "cmake;3.25.1"
+
+      - name: Host tests (pure logic, PC tools)
+        run: |
+          g++ -std=c++20 -Iapp/src/main/cpp tests/pad_state_test.cpp -o /tmp/pad_test && /tmp/pad_test
+          g++ -std=c++20 -Iapp/src/main/cpp tests/stats_test.cpp app/src/main/cpp/ng2_stats.cpp -o /tmp/stats_test && /tmp/stats_test
+          python3 tests/xex_parse_check.py
+          python3 tests/check_jni.py
+          python3 tests/test_ng2dev.py
+
+      - name: Build debug APK
+        run: ./gradlew --no-daemon assembleDebug
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ninjas-dawn-test-apk
+          path: app/build/outputs/apk/debug/*.apk
