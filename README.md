@@ -1,29 +1,25 @@
 # Ninja's Dawn – Android
 
-Port Android untuk proyek rekompilasi Ninja Gaiden II ("Ninja's Dawn", ReXGlue SDK).
-**Baca `docs/ANDROID_PORT.md` dulu:** isinya status jujur, apa yang sudah
-diverifikasi, dan langkah build mode runtime.
+Android port for the *Ninja Gaiden II* recompilation project ("Ninja's Dawn", ReXGlue SDK).
+**Read `docs/ANDROID_PORT.md` first:** it contains an honest assessment of the current status, what has been verified, and the steps for building the runtime environment.
 
-- `app/` — project Android Studio (Kotlin + NDK, arm64): setup, kontrol sentuh,
-  gamepad, menu, editor layout.
-- `sdk-patch/` — patch Android untuk ReXGlue SDK (`docs/SDK_ANDROID_PATCH.md`).
-- `tools/` — `ng2dev.py` (PC: pasang, pantau FPS langsung, kirim input, laporan, analisis log), `apply_sdk_patch.sh`, `make_android_manifest.py`.
-- `docs/DEBUGGING.md` — telemetri, log, perintah `adb`, dan cara membaca masalah.
-- `tests/` — tes host (tanpa Android).
+- `app/` — Android Studio project (Kotlin + NDK, arm64): setup, touch controls,
+  gamepad support, menus, and layout editor.
+- `sdk-patch/` — Android patches for the ReXGlue SDK (see `docs/SDK_ANDROID_PATCH.md`).
+- `tools/` — `ng2dev.py` (PC-side tool: installation, real-time FPS monitoring, input injection, reporting, and log analysis), `apply_sdk_patch.sh`, and `make_android_manifest.py`.
+- `docs/DEBUGGING.md` — telemetry, logging, `adb` commands, and how to diagnose issues.
+- `tests/` — host-side tests (non-Android).
 
-Coba cepat (mode uji, tanpa game/SDK), pilih salah satu:
+Quick start (test mode, without the game/SDK)—choose one of the following:
 
-- **Tanpa Android Studio:** unggah folder ini ke repo GitHub, buka tab *Actions*, jalankan
-  `android-test-apk`, unduh APK dari *Artifacts*, pasang di HP (izinkan pemasangan dari
-  sumber tak dikenal).
-- **Android Studio:** buka folder ini (NDK 27, CMake 3.25) atau `./gradlew assembleDebug`.
+- **Without Android Studio:** Push this folder to a GitHub repository, go to the *Actions* tab, run
+  `android-test-apk`, download the APK from *Artifacts*, and install it on your phone (ensure you allow installation from unknown sources).
+- **With Android Studio:** Open this folder (requires NDK 27, CMake 3.25) or run `./gradlew assembleDebug`.
 
-Di HP: kartu *Cek perangkat* memeriksa GPU/CPU/RAM; tekan *Main* untuk mencoba kontrol.
+On your phone: The *Check Device* card verifies your GPU, CPU, and RAM; tap *Play* to test the controls.
 
-Semua pemeriksaan sekaligus: `tests/run_all.sh` (yang tidak bisa dijalankan dilaporkan SKIP, bukan PASS).
-
-Tes host:
+Run all checks: `tests/run_all.sh` (tests that cannot be executed will be marked as SKIP, not PASS). Host test:
 
     g++ -std=c++20 -Iapp/src/main/cpp tests/pad_state_test.cpp -o /tmp/t && /tmp/t
     python3 tests/xex_parse_check.py
-    # logika Kotlin (butuh kotlinc, android.jar, org.json): lihat tests/run_kotlin_tests.sh
+    # Kotlin logic (requires kotlinc, android.jar, org.json): see tests/run_kotlin_tests.sh
