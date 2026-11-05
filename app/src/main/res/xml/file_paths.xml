@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- Diagnostic reports: Android/data/<pkg>/files/reports (also reachable by `adb pull`). -->
+    <external-files-path name="reports" path="reports/" />
+    <files-path name="logs" path="logs/" />
+</paths>
