@@ -2,7 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-feature android:glEsVersion="0x00030001" android:required="true" />
-    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x401000" android:required="true" />
+    <!-- Not "required": the test build needs no Vulkan, and the app checks the GPU itself (DeviceCheck). -->
+    <uses-feature android:name="android.hardware.vulkan.version" android:version="0x401000" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
     <uses-feature android:name="android.hardware.gamepad" android:required="false" />
 
@@ -11,6 +12,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
 
     <application
+        android:name=".Ng2Application"
         android:allowBackup="false"
         android:extractNativeLibs="true"
         android:hasFragileUserData="true"
@@ -30,6 +32,28 @@
             </intent-filter>
         </activity>
 
+        <!-- Lets the diagnostic report be shared from the phone. -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.files"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!-- Real runtime: SDL3's activity glue; loads libmain.so and runs SDL_main. -->
+        <activity
+            android:name=".GameSdlActivity"
+            android:exported="false"
+            android:launchMode="singleTask"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen"
+            android:screenOrientation="sensorLandscape"
+            android:resizeableActivity="false"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|smallestScreenSize|screenLayout|navigation|uiMode|density|layoutDirection|colorMode" />
+
+        <!-- Test mode: stub host. -->
         <activity
             android:name=".GameActivity"
             android:exported="false"
