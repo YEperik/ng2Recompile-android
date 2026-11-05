@@ -13,6 +13,7 @@
 
 #include "ng2_host.h"
 #include "ng2_pad_state.h"
+#include "ng2_stats.h"
 
 namespace ng2 {
 
@@ -57,6 +58,7 @@ class StubHost final : public Host {
   void Loop() {
     using namespace std::chrono;
     while (run_) {
+      if (!paused_) stats::NoteFrame();   // the test "game" ticks once per drawn frame
       Draw();
       std::this_thread::sleep_for(milliseconds(paused_ ? 100 : 16));
     }
