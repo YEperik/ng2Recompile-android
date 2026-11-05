@@ -45,8 +45,12 @@ REXCVAR_DECLARE(int32_t, ng2_video_mode);
 extern uint32_t g_ng2_skip_path_va;
 
 namespace ng2::android {
-// Set by ng2_rex_host.cpp before the app is created.
-inline std::string g_files_dir;
+// App-private files dir. Kotlin (GameSdlActivity) exports it as NG2_FILES_DIR
+// before SDLActivity starts the SDL_main thread.
+inline std::string FilesDir() {
+  const char* e = std::getenv("NG2_FILES_DIR");
+  return e ? std::string(e) : std::string();
+}
 }  // namespace ng2::android
 
 class Ng2App : public rex::ReXApp {
@@ -76,11 +80,19 @@ class Ng2App : public rex::ReXApp {
     }
     // Everything the guest writes (saves, profile, content) lives in the
     // app's private files dir: always writable, removed with the app.
+    //
+    // ReXApp::SetupEnvironment derives its defaults from the EXECUTABLE folder,
+    // which on Android is /system/bin (read-only): config_path would be
+    // /system/bin/ng2.toml. Set every path explicitly instead.
     std::error_code ec;
-    const std::filesystem::path user =
-        std::filesystem::path(ng2::android::g_files_dir) / "user";
+    const std::filesystem::path root(ng2::android::FilesDir());
+    const std::filesystem::path user = root / "user";
     std::filesystem::create_directories(user, ec);
+    std::filesystem::create_directories(root / "cache", ec);
+    std::filesystem::create_directories(root / "logs", ec);
     paths.user_data_root = user;
+    paths.cache_root = root / "cache";
+    paths.config_path = root / "ng2.toml";
   }
 
   void OnPostSetup() override {
@@ -126,7 +138,7 @@ class Ng2App : public rex::ReXApp {
   // Kotlin side (Settings.kt) so a config can move between platforms.
   void LoadCfg() {
     cfg_.clear();
-    std::ifstream in(std::filesystem::path(ng2::android::g_files_dir) /
+    std::ifstream in(std::filesystem::path(ng2::android::FilesDir()) /
                      "ng2_settings.cfg");
     for (std::string line; std::getline(in, line);) {
       const auto eq = line.find('=');
